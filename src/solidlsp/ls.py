@@ -90,6 +90,23 @@ class ReferenceInSymbol:
     character: int
 
 
+@dataclasses.dataclass(frozen=True)
+class FileVersion:
+    """
+    An immutable token identifying the state of a file on disk.
+
+    It is composed of the file's modification time and size, both of which can be read
+    from a single `stat` call without accessing the file's contents.
+    """
+
+    mtime: float
+    size: int
+
+    @staticmethod
+    def from_stat(stat_result: os.stat_result) -> "FileVersion":
+        return FileVersion(mtime=stat_result.st_mtime, size=stat_result.st_size)
+
+
 class LSPFileBuffer:
     """
     This class is used to store the contents of an open LSP file in memory.
@@ -217,6 +234,17 @@ class LSPFileBuffer:
         if self._content_hash is None:
             self._content_hash = hashlib.md5(self.contents.encode(self.encoding)).hexdigest()
         return self._content_hash
+
+    @property
+    def file_version(self) -> FileVersion:
+        """
+        The version of the file's contents as they currently exist on disk.
+
+        Because the version is derived solely from the modification time and the file size,
+        retrieving it requires a single `stat` call and never reads the file's contents.
+        A modification that preserves both values is therefore not detected.
+        """
+        return FileVersion.from_stat(self.abs_path.stat())
 
     def split_lines(self) -> list[str]:
         """Splits the contents of the file into lines."""
@@ -349,7 +377,7 @@ class SolidLanguageServer(ABC):
     """
 
     CACHE_FOLDER_NAME = "cache"
-    RAW_DOCUMENT_SYMBOLS_CACHE_VERSION = 1
+    RAW_DOCUMENT_SYMBOLS_CACHE_VERSION = 2
     """
     global version identifier for raw symbol caches; an LS-specific version is defined separately and combined with this.
     This should be incremented whenever there is a change in the way raw document symbols are stored.
@@ -358,7 +386,7 @@ class SolidLanguageServer(ABC):
     """
     RAW_DOCUMENT_SYMBOL_CACHE_FILENAME = "raw_document_symbols.pkl"
     RAW_DOCUMENT_SYMBOL_CACHE_FILENAME_LEGACY_FALLBACK = "document_symbols_cache_v23-06-25.pkl"
-    DOCUMENT_SYMBOL_CACHE_VERSION = 4
+    DOCUMENT_SYMBOL_CACHE_VERSION = 5
     """
     defines the version of the high-level document symbol format.
     This should be incremented whenever there is a change in the way document symbols are stored.
@@ -550,13 +578,13 @@ class SolidLanguageServer(ABC):
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         # * raw document symbols cache
         self._ls_specific_raw_document_symbols_cache_version = cache_version_raw_document_symbols
-        self._raw_document_symbols_cache: dict[str, tuple[str, list[DocumentSymbol] | list[SymbolInformation] | None]] = {}
-        """maps relative file paths to a tuple of (file_content_hash, raw_root_symbols)"""
+        self._raw_document_symbols_cache: dict[str, tuple[FileVersion, list[DocumentSymbol] | list[SymbolInformation] | None]] = {}
+        """maps relative file paths to a tuple of (file_version, raw_root_symbols)"""
         self._raw_document_symbols_cache_is_modified: bool = False
         self._load_raw_document_symbols_cache()
         # * high-level document symbols cache
-        self._document_symbols_cache: dict[str, tuple[str, DocumentSymbols]] = {}
-        """maps relative file paths to a tuple of (file_content_hash, document_symbols)"""
+        self._document_symbols_cache: dict[str, tuple[FileVersion, DocumentSymbols]] = {}
+        """maps relative file paths to a tuple of (file_version, document_symbols)"""
         self._document_symbols_cache_is_modified: bool = False
         self._load_document_symbols_cache()
 
@@ -1862,14 +1890,14 @@ class SolidLanguageServer(ABC):
         """
 
         def get_cached_raw_document_symbols(cache_key: str, fd: LSPFileBuffer) -> list[SymbolInformation] | list[DocumentSymbol] | None:
-            file_hash_and_result = self._raw_document_symbols_cache.get(cache_key)
-            if file_hash_and_result is None:
+            file_version_and_result = self._raw_document_symbols_cache.get(cache_key)
+            if file_version_and_result is None:
                 log.debug("No cache hit for raw document symbols in %s", relative_file_path)
                 log.debug("perf: raw_document_symbols_cache MISS path=%s", relative_file_path)
                 return None
 
-            file_hash, result = file_hash_and_result
-            if file_hash == fd.content_hash:
+            file_version, result = file_version_and_result
+            if file_version == fd.file_version:
                 log.debug("Returning cached raw document symbols for %s", relative_file_path)
                 log.debug("perf: raw_document_symbols_cache HIT path=%s", relative_file_path)
                 return result
@@ -1892,7 +1920,7 @@ class SolidLanguageServer(ABC):
             # has not yet finished indexing or building the project (e.g. Lean 4 before `lake build`),
             # and caching it would permanently serve stale data even after the project is ready.
             if response:
-                self._raw_document_symbols_cache[cache_key] = (fd.content_hash, response)
+                self._raw_document_symbols_cache[cache_key] = (fd.file_version, response)
                 self._raw_document_symbols_cache_is_modified = True
 
             return response
@@ -1960,25 +1988,25 @@ class SolidLanguageServer(ABC):
         with self._open_file_context(relative_file_path, file_buffer, open_in_ls=False) as file_data:
             # check if the desired result is cached
             cache_key = relative_file_path
-            file_hash_and_result = self._document_symbols_cache.get(cache_key)
-            if file_hash_and_result is None:
+            file_version_and_result = self._document_symbols_cache.get(cache_key)
+            if file_version_and_result is None:
                 log.debug("No cache hit for document symbols in %s", relative_file_path)
             else:
-                file_hash, document_symbols = file_hash_and_result
-                if file_hash == file_data.content_hash:
-                    log.debug("Returning cached document symbols for %s (hash=%s)", relative_file_path, file_hash)
+                file_version, document_symbols = file_version_and_result
+                if file_version == file_data.file_version:
+                    log.debug("Returning cached document symbols for %s (version=%s)", relative_file_path, file_version)
                     return document_symbols
 
-                log.debug("Cached document symbol content for %s has changed (old hash=%s)", relative_file_path, file_hash)
+                log.debug("Cached document symbol content for %s has changed (old version=%s)", relative_file_path, file_version)
 
             # no cached result: get the raw root symbols from the language server
             document_symbols = self._build_document_symbols_from_raw_symbols(relative_file_path, file_buffer=file_data)
 
             # update cache (only cache non-empty results to avoid permanently caching unindexed responses)
-            content_hash = file_data.content_hash
+            file_version = file_data.file_version
             if document_symbols.root_symbols:
-                log.debug("Updating cached document symbols for %s (hash=%s)", relative_file_path, content_hash)
-                self._document_symbols_cache[cache_key] = (content_hash, document_symbols)
+                log.debug("Updating cached document symbols for %s (version=%s)", relative_file_path, file_version)
+                self._document_symbols_cache[cache_key] = (file_version, document_symbols)
                 self._document_symbols_cache_is_modified = True
 
             return document_symbols

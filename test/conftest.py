@@ -314,6 +314,7 @@ _LANGUAGE_PYTEST_MARKERS: dict[LanguageServerId, list[MarkDecorator | Mark]] = {
     LanguageServerId.HTML: [pytest.mark.html],
     LanguageServerId.SCSS: [pytest.mark.scss],
     LanguageServerId.ASTRO: [pytest.mark.astro],
+    LanguageServerId.VBNET: [pytest.mark.vbnet],
 }
 
 

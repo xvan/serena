@@ -19,6 +19,7 @@ from typing import Any, cast
 from overrides import override
 
 from serena.util.dotnet import DotNETUtil
+from solidlsp.dependency_provider import DownloadedDependency, DownloadedDependencyHashDatabase
 from solidlsp.ls import (
     LanguageServerDependencyProvider,
     LSPFileBuffer,
@@ -88,6 +89,11 @@ _ARCHIVE_TYPE_BY_PLATFORM: dict[str, FileUtils.ArchiveType] = {
     "linux-arm64": "gztar",
 }
 
+_ARCHIVE_SUFFIX_BY_PLATFORM: dict[str, str] = {
+    platform_id: "zip" if archive_type == "zip" else "tar.gz" for platform_id, archive_type in _ARCHIVE_TYPE_BY_PLATFORM.items()
+}
+"""File name suffix of the release asset, which differs from the archive type the extraction requires."""
+
 _PLATFORM_LABELS = {
     "win-x64": "Windows (x64)",
     "win-arm64": "Windows (ARM64)",
@@ -101,7 +107,7 @@ _RUNTIME_DEPENDENCIES = [
     RuntimeDependency(
         id="VBNetLanguageServer",
         description=f"Roslyn Language Server with VB.NET support for {_PLATFORM_LABELS[platform_id]}",
-        url=f"{VBNET_LANGUAGE_SERVER_BASE_URL}/roslyn-vbnet-{platform_id}.{_ARCHIVE_TYPE_BY_PLATFORM[platform_id]}",
+        url=f"{VBNET_LANGUAGE_SERVER_BASE_URL}/roslyn-vbnet-{platform_id}.{_ARCHIVE_SUFFIX_BY_PLATFORM[platform_id]}",
         platform_id=platform_id,
         archive_type=_ARCHIVE_TYPE_BY_PLATFORM[platform_id],
         binary_name=LANGUAGE_SERVER_DLL_NAME,
@@ -306,6 +312,30 @@ class VBNetLanguageServer(SolidLanguageServer):
             self._repository_root_path = repository_root_path
             self._dotnet_path, self._language_server_path = self._ensure_server_installed()
 
+        @classmethod
+        def update_dep_hashes(cls) -> None:
+            """
+            Records the SHA256 hashes of the pinned language server releases in the central hash
+            database which backs :class:`DownloadedDependency`.
+            """
+            with DownloadedDependencyHashDatabase.get_instance().update_context() as database:
+                for dependency in _RUNTIME_DEPENDENCIES:
+                    database.update(cls._create_downloaded_dependency(dependency))
+
+        @staticmethod
+        def _create_downloaded_dependency(dependency: RuntimeDependency) -> DownloadedDependency:
+            """
+            :param dependency: the runtime dependency to be downloaded
+            :return: the hash-verified download handle for the given dependency
+            """
+            if dependency.url is None:
+                raise SolidLSPException(f"No URL specified for package {dependency.package_name} version {dependency.package_version}")
+            return DownloadedDependency(
+                dependency.url,
+                archive_type=dependency.archive_type or "zip",
+                allowed_hosts=dependency.allowed_hosts or GITHUB_RELEASE_HOSTS,
+            )
+
         def create_launch_command(self) -> list[str]:
             solution_or_project = find_solution_or_project_file(self._repository_root_path)
 
@@ -406,9 +436,8 @@ class VBNetLanguageServer(SolidLanguageServer):
             return str(server_dll)
 
         def _download_archive(self, dependency: RuntimeDependency, server_dir: Path) -> Path:
-            url = dependency.url
-            if url is None:
-                raise SolidLSPException(f"No URL specified for package {dependency.package_name} version {dependency.package_version}")
+            downloaded_dependency = self._create_downloaded_dependency(dependency)
+            url = downloaded_dependency.get_url()
 
             # The extracted archive is ~500 files; extracting it directly into the (deep) cache
             # path can exceed the Windows MAX_PATH limit, so download and extract into a
@@ -417,13 +446,7 @@ class VBNetLanguageServer(SolidLanguageServer):
             archive_path = download_dir / "roslyn-vbnet"
             try:
                 log.debug(f"Downloading Roslyn VB.NET Language Server from: {url}")
-                FileUtils.download_and_extract_archive_verified(
-                    url,
-                    str(archive_path),
-                    dependency.archive_type or "zip",
-                    expected_sha256=dependency.sha256,
-                    allowed_hosts=dependency.allowed_hosts or GITHUB_RELEASE_HOSTS,
-                )
+                downloaded_dependency.download_to(archive_path)
             except Exception as e:
                 raise SolidLSPException(f"Failed to download the Roslyn VB.NET Language Server from {url}: {e}") from e
 
@@ -781,17 +804,9 @@ class VBNetLanguageServer(SolidLanguageServer):
 
 def _runtime_dependencies_for_version(version: str) -> list[RuntimeDependency]:
     """Return the Roslyn VB.NET LS runtime dependencies for the configured release version."""
-    default_version = version == VBNET_LANGUAGE_SERVER_RELEASE_VERSION
     result: list[RuntimeDependency] = []
     for dependency in _RUNTIME_DEPENDENCIES:
-        assert dependency.url is not None
-        result.append(
-            replace(
-                dependency,
-                url=dependency.url.replace(VBNET_LANGUAGE_SERVER_RELEASE_VERSION, version),
-                # Checksums are only pinned for the version we have verified; a user-supplied
-                # version is downloaded over HTTPS but not hash-verified.
-                sha256=None if default_version else dependency.sha256,
-            )
-        )
+        if dependency.url is None:
+            raise SolidLSPException(f"No URL specified for package {dependency.package_name} version {dependency.package_version}")
+        result.append(replace(dependency, url=dependency.url.replace(VBNET_LANGUAGE_SERVER_RELEASE_VERSION, version)))
     return result

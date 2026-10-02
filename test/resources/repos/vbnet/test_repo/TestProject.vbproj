@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>TestProject</RootNamespace>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <!-- This project sits at the root of the test repository, so the default glob would
+       otherwise pull in the source files of the projects nested below it. -->
+  <ItemGroup>
+    <Compile Remove="ConsoleApp\**" />
+    <Compile Remove="CoreLib\**" />
+  </ItemGroup>
+
+</Project>

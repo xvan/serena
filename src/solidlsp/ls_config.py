@@ -388,6 +388,7 @@ class LanguageServerId(Enum):
             self.SCSS,
             self.ANGULAR,
             self.DENO,
+            self.VBNET,
         }
 
     def is_programming_language(self) -> bool:

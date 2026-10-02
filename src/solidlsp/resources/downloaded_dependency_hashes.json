@@ -22,5 +22,11 @@
   "https://download-cdn.jetbrains.com/language-server/kotlin-server/263.4702.0/kotlin-server-263.4702.0.tar.gz": "1e11d2e5fefbf9ea215ad8dd6be95f2222897cd086e8cb7a661a52084a590405",
   "https://download-cdn.jetbrains.com/language-server/kotlin-server/263.4702.0/kotlin-server-263.4702.0-aarch64.tar.gz": "ec7cb254a6662a07fff9f10e4365226afab6c40008f8a974c10ac5e785d6510f",
   "https://download-cdn.jetbrains.com/language-server/kotlin-server/263.4702.0/kotlin-server-263.4702.0.sit": "62ab735947b1c855b505f64f5db8fbd7ff0b52a35ab1897938c6dbfc7b24c8a3",
-  "https://download-cdn.jetbrains.com/language-server/kotlin-server/263.4702.0/kotlin-server-263.4702.0-aarch64.sit": "95da3fc6d3b9092c7616345044a05edb85e5408dc648d081e4e433595c892bec"
+  "https://download-cdn.jetbrains.com/language-server/kotlin-server/263.4702.0/kotlin-server-263.4702.0-aarch64.sit": "95da3fc6d3b9092c7616345044a05edb85e5408dc648d081e4e433595c892bec",
+  "https://github.com/LaunchCG/roslyn-vbnet-languageserver/releases/download/v1.0.0/roslyn-vbnet-win-x64.zip": "5ffc28a024a7c9f4d4d1cb01b3d2bee372f4876bd00303136ddbf99e32dac45c",
+  "https://github.com/LaunchCG/roslyn-vbnet-languageserver/releases/download/v1.0.0/roslyn-vbnet-win-arm64.zip": "72532ed93977027dde9ab74560c513a9ab1651a61f1e39fed37b29e77716f741",
+  "https://github.com/LaunchCG/roslyn-vbnet-languageserver/releases/download/v1.0.0/roslyn-vbnet-osx-x64.tar.gz": "47936855467c2687c59f9a233b7c5d53cdbbaacddd8f51962142ddbe7f700ed3",
+  "https://github.com/LaunchCG/roslyn-vbnet-languageserver/releases/download/v1.0.0/roslyn-vbnet-osx-arm64.tar.gz": "ba86485495b69ac7b1176c7b77c5ae03d5f71f5526edebf096846c87fbd928bd",
+  "https://github.com/LaunchCG/roslyn-vbnet-languageserver/releases/download/v1.0.0/roslyn-vbnet-linux-x64.tar.gz": "28085bd50239ce3fbbdaa49f8407a99959da3cf8ada191e1e109a1bd4296aedb",
+  "https://github.com/LaunchCG/roslyn-vbnet-languageserver/releases/download/v1.0.0/roslyn-vbnet-linux-arm64.tar.gz": "84b96335f5422f1bb0d257cb33a976fd71aa860df66d00a825f1b39222654ee0"
 }

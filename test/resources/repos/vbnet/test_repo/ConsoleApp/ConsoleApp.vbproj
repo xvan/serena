@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>ConsoleApp</RootNamespace>
+  </PropertyGroup>
+
+  <!-- Only the C# library is referenced: the .NET SDK on this machine cannot consume a
+       VB.NET-produced assembly, neither from a project reference nor from a binary one. -->
+  <ItemGroup>
+    <ProjectReference Include="..\CoreLib\CoreLib.csproj" />
+  </ItemGroup>
+
+</Project>

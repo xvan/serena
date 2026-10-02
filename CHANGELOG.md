@@ -107,6 +107,10 @@ Status of the `main` branch. Changes prior to the next official version change w
     thread (#2038)
 
 * Language Servers:
+  - Add VB.NET language server support (experimental), using a Roslyn build that includes the
+    Visual Basic language services, as the official `Microsoft.CodeAnalysis.LanguageServer`
+    packages ship the C# services only; it serves `.cs` files as well and requires the .NET 10
+    runtime, so it is not auto-detected and must be enabled explicitly
   - Fix: `SafeZipExtractor` discarded Unix executable permission bits stored in extracted
     archives' `ZipInfo.external_attr` (a long-standing stdlib `zipfile` limitation,
     tracked upstream at https://github.com/python/cpython/pull/150061), leaving every

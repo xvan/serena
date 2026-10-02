@@ -182,6 +182,15 @@ Some languages require additional installations or setup steps, as noted.
   globals, which the plain TypeScript language server does not; overlaps `typescript` on file extensions,
   so it is not auto-detected and must be set as the language explicitly — do not also enable `typescript`
   for the same files)
+* **VB.NET**
+  (experimental; requires the .NET 10 runtime; uses a Roslyn language server with Visual Basic support,
+  since the official `Microsoft.CodeAnalysis.LanguageServer` packages provide the C# services only.
+  Microsoft does not publish a build containing these services, so the binaries are taken from the
+  third-party `LaunchCG/roslyn-vbnet-languageserver` release, pinned per platform by SHA256 hash and
+  downloaded automatically; building the binaries from the upstream Roslyn sources within this project
+  would remove that third-party dependency, should the project prefer to own them. The server serves
+  `.cs` files as well, so it overlaps `csharp` on file extensions and is therefore not auto-detected —
+  set it as the language explicitly, and do not also enable `csharp` for the same files)
 * **Vue**
   (3.x with TypeScript; requires Node.js v18+ and npm; supports .vue Single File Components with monorepo detection)
 * **Wolfram Language**

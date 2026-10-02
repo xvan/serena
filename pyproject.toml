@@ -387,6 +387,7 @@ markers = [
   "gleam: language server running for Gleam (uses the Gleam compiler's bundled `gleam lsp`)",
   "wolfram: language server running for Wolfram Language (requires Mathematica 13.0+ or Wolfram Engine 12.1+)",
   "astro: language server running for Astro (uses @astrojs/language-server)",
+  "vbnet: language server running for VB.NET (uses a Roslyn build with Visual Basic support; also serves .cs)",
 ]
 
 [tool.codespell]

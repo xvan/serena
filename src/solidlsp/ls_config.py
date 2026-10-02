@@ -123,6 +123,7 @@ class LanguageServerId(Enum):
     """
 
     CSHARP = "csharp"
+    VBNET = "vbnet"
     PYTHON = "python"
     RUST = "rust"
     JAVA = "java"
@@ -676,6 +677,13 @@ class LanguageServerId(Enum):
                         for base_pattern in ["ts", "js"]:
                             path_patterns.append(f".{prefix}{base_pattern}{postfix}")
                 return FilenameMatcher(*path_patterns)
+            case self.VBNET:
+                # The VB.NET Roslyn build ships the VisualBasic *and* the C# language
+                # services, so it serves .cs alongside .vb. Routing both here means a
+                # project configured with `language_servers: [vbnet]` handles mixed
+                # C#/VB solutions through this single server instead of also requiring
+                # the csharp server (and its separate download).
+                return FilenameMatcher(".vb", ".cs")
             case _:
                 raise ValueError(f"Unhandled language: {self}")
 
@@ -983,6 +991,10 @@ class LanguageServerId(Enum):
                 from solidlsp.language_servers.deno_language_server import DenoLanguageServer
 
                 return DenoLanguageServer
+            case self.VBNET:
+                from solidlsp.language_servers.vbnet_language_server import VBNetLanguageServer
+
+                return VBNetLanguageServer
             case _:
                 raise ValueError(f"Unhandled language: {self}")
 

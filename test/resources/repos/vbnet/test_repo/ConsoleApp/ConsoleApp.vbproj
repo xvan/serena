@@ -6,8 +6,8 @@
     <RootNamespace>ConsoleApp</RootNamespace>
   </PropertyGroup>
 
-  <!-- Only the C# library is referenced: the .NET SDK on this machine cannot consume a
-       VB.NET-produced assembly, neither from a project reference nor from a binary one. -->
+  <!-- Only the C# library is referenced here; the C# -> VB.NET direction is covered by the
+       Consumer project. Both directions are expected to resolve. -->
   <ItemGroup>
     <ProjectReference Include="..\CoreLib\CoreLib.csproj" />
   </ItemGroup>

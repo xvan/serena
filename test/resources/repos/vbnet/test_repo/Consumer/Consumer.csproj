@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>Consumer</AssemblyName>
+  </PropertyGroup>
+
+  <!-- C# consuming the VB.NET library: the cross-language direction a VB.NET-first
+       solution has to get right. -->
+  <ItemGroup>
+    <ProjectReference Include="..\TestProject.vbproj" />
+  </ItemGroup>
+
+</Project>

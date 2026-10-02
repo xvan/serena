@@ -1,4 +1,5 @@
 import os
+import re
 import tempfile
 from pathlib import Path
 
@@ -17,6 +18,7 @@ CALCULATOR_FILE = "Calculator.vb"
 PERSON_FILE = os.path.join("Models", "Person.vb")
 PROGRAM_FILE = os.path.join("ConsoleApp", "Program.vb")
 CSHARP_FILE = os.path.join("CoreLib", "Formatter.cs")
+CONSUMER_FILE = os.path.join("Consumer", "Program.cs")
 
 
 def _document_symbols(language_server: SolidLanguageServer, file_path: str) -> list[dict]:
@@ -124,6 +126,51 @@ class TestVBNetLanguageServer:
         expected = PROGRAM_FILE.replace(os.sep, "/")
         assert any(path == expected for path in reference_files), (
             f"Should find a reference in {expected} where Formatter.Currency is called; got {reference_files}"
+        )
+
+    @pytest.mark.parametrize("language_server", [LanguageServerId.VBNET], indirect=True)
+    def test_definition_from_csharp_into_vbnet(self, language_server: SolidLanguageServer) -> None:
+        """Test that a C# project resolves a member of a referenced VB.NET project."""
+        source = _read_source(CONSUMER_FILE)
+        line, character = _position_of(source, "IsAdult")
+        definitions = language_server.request_definition(CONSUMER_FILE, line, character)
+
+        target_paths = [str(definition.get("relativePath", "")).replace(os.sep, "/") for definition in definitions or []]
+        expected = PERSON_FILE.replace(os.sep, "/")
+        assert any(path == expected for path in target_paths), (
+            f"Expected definition in {expected} where Person.IsAdult is declared; got {target_paths}"
+        )
+
+    @pytest.mark.parametrize("language_server", [LanguageServerId.VBNET], indirect=True)
+    def test_references_from_csharp_into_vbnet(self, language_server: SolidLanguageServer) -> None:
+        """Test that references made from C# to a VB.NET member are found."""
+        source = _read_source(PERSON_FILE)
+        line, character = _position_of(source, "IsAdult")
+        references = language_server.request_references(PERSON_FILE, line, character)
+
+        reference_files = [str(reference.get("relativePath", "")).replace(os.sep, "/") for reference in references]
+        expected = CONSUMER_FILE.replace(os.sep, "/")
+        assert any(path == expected for path in reference_files), (
+            f"Should find a reference in {expected} where Person.IsAdult is called from C#; got {reference_files}"
+        )
+
+    def test_vb_project_does_not_redeclare_root_namespace(self) -> None:
+        """Test that the VB.NET project does not re-prefix the declared namespaces.
+
+        A VB.NET SDK-style project defaults ``RootNamespace`` to the project name and
+        prepends it to every explicit ``Namespace X ... End Namespace`` block, which
+        silently compiles these types into ``TestProject.TestProject.*`` instead of the
+        declared ``TestProject.*``. Nothing in a name-only symbol lookup can see that,
+        so the project file itself is asserted on. The cross-language tests fail as a
+        consequence if this regresses.
+        """
+        from test.conftest import get_repo_path
+
+        project_file = Path(str(get_repo_path(LanguageServerId.VBNET))) / "TestProject.vbproj"
+        declared = re.findall(r"<RootNamespace>(.*?)</RootNamespace>", project_file.read_text(encoding="utf-8"))
+
+        assert declared == [""], (
+            f"RootNamespace must stay empty so the explicit Namespace blocks in the sources are used as written; got {declared}"
         )
 
     @pytest.mark.parametrize("language_server", [LanguageServerId.VBNET], indirect=True)

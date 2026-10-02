@@ -1,7 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>TestProject</RootNamespace>
+    <!-- Intentionally empty: a VB.NET SDK-style project defaults RootNamespace to the project
+         name, and that default is prepended to every explicit `Namespace X ... End Namespace`
+         block in the sources. Leaving it set would silently compile the types into
+         TestProject.TestProject.* instead of the declared TestProject.*. -->
+    <RootNamespace></RootNamespace>
     <TargetFramework>net10.0</TargetFramework>
   </PropertyGroup>
 
@@ -10,6 +14,7 @@
   <ItemGroup>
     <Compile Remove="ConsoleApp\**" />
     <Compile Remove="CoreLib\**" />
+    <Compile Remove="Consumer\**" />
   </ItemGroup>
 
 </Project>

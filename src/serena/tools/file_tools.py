@@ -330,12 +330,19 @@ class SearchForPatternTool(Tool, FsApiMixin):
         Searches for a regex pattern across project files, returning whole matched lines (plus optional context).
         Prefer symbolic operations if you know which symbols you are looking for!
 
+        The search is always scoped to `relative_path`; an unscoped call (empty `relative_path`) is rejected,
+        because it reads every file of the project and is prohibitively slow on large repositories.
+        Scope the search to a file or subtree; pass ``'.'`` only when the user explicitly asked for a
+        whole-project text search.
+
         :param substring_pattern: regular expression to search for.
         :param context_lines_before: number of context lines to include before each match.
         :param context_lines_after: number of context lines to include after each match.
         :param paths_include_glob: optional glob (relative to project root, e.g. ``"src/**/*.ts"``) restricting which files are searched.
         :param paths_exclude_glob: optional glob to exclude files; takes precedence over `paths_include_glob`.
-        :param relative_path: restricts the search to this file or subdirectory of the project root
+        :param relative_path: the file or subdirectory of the project root to restrict the search to;
+            a non-empty value is required. An empty value is rejected with an error; ``'.'`` searches the
+            entire project and costs the same as an unscoped search.
         :param restrict_search_to_code_files: whether to search only (non-ignored) files containing analyzable code symbols
             (useful when looking for class/method definitions); otherwise also search non-code files.
         :param skip_ignored_files: whether to skip ignored sub-paths (default: True)
@@ -344,6 +351,15 @@ class SearchForPatternTool(Tool, FsApiMixin):
             ``-1`` uses the configured default.
         :return: A mapping from file paths to matched consecutive lines (0-based line numbers).
         """
+        # rejecting unscoped searches, which read every file of the project
+        if not relative_path or not relative_path.strip():
+            raise ValueError(
+                "search_for_pattern was called without a scope: `relative_path` is empty, which would read every "
+                "file of the project (observed: ~48k files and 1-2 minutes on large repositories). Pass "
+                "`relative_path` set to the file or subtree you are investigating. Only pass '.' when the user "
+                "explicitly asked for a whole-project text search."
+            )
+
         return (
             self._api()
             .search_for_pattern(

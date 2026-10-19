@@ -304,7 +304,9 @@ class FsApi(FacadeApi):
         :param context_lines_after: number of context lines to include after each match.
         :param paths_include_glob: optional glob (relative to project root, e.g. ``"src/**/*.ts"``) restricting which files are searched.
         :param paths_exclude_glob: optional glob to exclude files; takes precedence over `paths_include_glob`.
-        :param relative_path: restricts the search to this file or subdirectory of the project root
+        :param relative_path: the file or subdirectory of the project root to restrict the search to;
+            an empty value searches the entire project, which reads every file and is slow on large
+            repositories; the corresponding `search_for_pattern` tool rejects such unscoped calls
         :param restrict_search_to_code_files: whether to search only (non-ignored) files containing analyzable code symbols
             (useful when looking for class/method definitions); otherwise also search non-code files.
         :param skip_ignored_files: whether to skip ignored sub-paths (default: True)

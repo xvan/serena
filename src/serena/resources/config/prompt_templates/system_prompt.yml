@@ -16,11 +16,17 @@ prompts:
     {% if 'search_for_pattern' in available_tools %}
     For searches beyond named symbols, you can use `{{ tool_names['search_for_pattern'] }}` and flexible search for patterns in the codebase.{% if 'ToolMarkerSymbolicRead' in available_markers %} In this way, you can first find candidates for symbols or files to explore,
     and then proceed with symbolic operations.{% endif %}
+    Always pass `relative_path` (the file or subtree to search): unscoped searches are rejected, because they read
+    every file of the project and are prohibitively slow on large repositories. Use `.` only for a whole-project
+    text search that the user explicitly asked for.
     {% endif %}
 
     {% if 'ToolMarkerSymbolicRead' in available_markers %}
     Symbols are identified by their `name_path` and `relative_path`.
     You can get an overview of the symbols in a file by using `{{ tool_names['get_symbols_overview'] }}`, or search for a specific symbol with `{{ tool_names['find_symbol'] }}`.
+    `{{ tool_names['find_symbol'] }}` requires a non-empty `relative_path`: unscoped searches are rejected, because they scan the entire
+    codebase. If you don't know which file holds the symbol, first narrow down a candidate file or subtree with a scoped pattern search,
+    then search within that file or directory.
     You only read the bodies of symbols when you need to (e.g. if you want to fully understand or edit it).
     For example, if you are working with Python code and already know that you need to read the body of the constructor of the class Foo, you can directly
     use `{{ tool_names['find_symbol'] }}` with name path pattern `Foo/__init__` and `include_body=True`. If you don't know yet which methods in `Foo` you need to read or edit,
@@ -82,7 +88,7 @@ prompts:
     --------------------------------------  ----------------------------------------
     See a code file's structure             get_symbols_overview
     Read a specific symbol's body           find_symbol (include_body=true)
-    Find a symbol by name across the repo   find_symbol
+    Find a symbol in a file or directory    find_symbol (relative_path is required)
     Find references / callers               find_referencing_symbols
     Find declarations / implementations     find_declaration / _find_implementations
     Edit a symbol's body                    replace_symbol_body
@@ -91,6 +97,10 @@ prompts:
     Rename / move / delete a symbol         rename / _move / _safe_delete
     Inline a symbol                         inline_symbol
     Type hierarchy                          type_hierarchy
+
+    find_symbol and search_for_pattern reject unscoped calls (empty relative_path): such calls would scan every
+    file of the repo, so scope them to a file or subtree. When you don't know where the symbol lives, narrow down
+    a candidate file first with a scoped search. Use '.' only for a whole-project search the user asked for.
 
     Built-in Read/Edit/Glob/Grep are permitted on code files ONLY when:
     - Serena has been tried on the target and failed, OR

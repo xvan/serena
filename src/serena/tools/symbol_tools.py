@@ -72,7 +72,7 @@ class GetSymbolsOverviewTool(Tool, ToolMarkerSymbolicRead, LspApiMixin):
 
 class FindSymbolTool(Tool, ToolMarkerSymbolicRead, LspApiMixin):
     """
-    Performs a global (or local) search using the language server backend.
+    Searches for symbols within a file or directory using the language server backend.
     """
 
     @property
@@ -99,6 +99,11 @@ class FindSymbolTool(Tool, ToolMarkerSymbolicRead, LspApiMixin):
         The returned symbol information can be used for edits or further queries.
         Specify `depth > 0` to also retrieve children/descendants (e.g., methods of a class).
 
+        The search is always scoped to `relative_path`; an unscoped call (empty `relative_path`) is rejected,
+        because it scans the entire codebase and is prohibitively slow on large repositories.
+        If you do not know where the symbol lives, first locate a file with `find_file` or with
+        `search_for_pattern` restricted to a promising subtree, then search within that file or directory.
+
         A name path is a path in the symbol tree *within a source file*.
         For example, the method `my_method` defined in class `MyClass` would have the name path `MyClass/my_method`.
         If a symbol is overloaded (e.g., in Java), a 0-based index is appended (e.g. "MyClass/my_method[0]") to
@@ -115,11 +120,12 @@ class FindSymbolTool(Tool, ToolMarkerSymbolicRead, LspApiMixin):
         :param depth: depth up to which descendants shall be retrieved (e.g. use 1 to also retrieve immediate children;
             for the case where the symbol is a class, this will return its methods).
             Ignored if `include_body=True`. Default 0.
-        :param relative_path: (optional) restrict search to this file or directory. If None, searches entire codebase.
+        :param relative_path: the file or directory to restrict the search to; a non-empty value is required.
             If a directory is passed, the search will be restricted to the files in that directory.
             If a file is passed, the search will be restricted to that file.
-            If you have some knowledge about the codebase, you should use this parameter, as it will significantly
-            speed up the search as well as reduce the number of results.
+            An empty value (or None) is rejected with an error, since such an unscoped search scans the
+            entire codebase. Pass ``'.'`` only for a deliberate whole-project search; it is not a cheaper
+            alternative, it performs the same full scan.
         :param include_body: If True, include the symbol's source code. Use judiciously.
         :param include_info: whether to include additional info (hover-like, typically including docstring and signature),
             about the symbol (ignored if include_body is True). Info is never included for child symbols.
@@ -133,6 +139,17 @@ class FindSymbolTool(Tool, ToolMarkerSymbolicRead, LspApiMixin):
         :param max_answer_chars: max result length; -1 for default
         :return: symbols (with locations) matching the name.
         """
+        # rejecting unscoped searches, which scan the entire codebase
+        if not relative_path or not relative_path.strip():
+            raise ValueError(
+                "find_symbol was called without a scope: `relative_path` is empty, which would scan the entire "
+                "codebase and can take minutes on large repositories. Locate the symbol's file first — via "
+                "`search_for_pattern` restricted with `relative_path` to a promising subtree, or `find_file` "
+                "when it is available in this context — then call find_symbol with that file or its directory "
+                "as `relative_path`. Only pass '.' when "
+                "the user explicitly asked for a whole-project symbol search."
+            )
+
         return (
             self._api()
             .find_symbol(

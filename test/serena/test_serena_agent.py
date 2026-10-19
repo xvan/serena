@@ -986,7 +986,7 @@ class TestSerenaAgent:
     def test_find_symbol(self, serena_agent: SerenaAgent, case: FindSymbolCase) -> None:
         agent = serena_agent
         find_symbol_tool = agent.get_tool(FindSymbolTool)
-        result = find_symbol_tool.apply(name_path_pattern=case.symbol_name, include_info=True)
+        result = find_symbol_tool.apply(name_path_pattern=case.symbol_name, relative_path=".", include_info=True)
         symbols = json.loads(result)
         assert any(
             case.symbol_name in s["name_path"]
@@ -1121,7 +1121,7 @@ class TestSerenaAgent:
         result = find_symbol_tool.apply(
             name_path_pattern=case.name_path,
             depth=0,
-            relative_path=None,
+            relative_path=".",
             include_body=False,
             include_kinds=None,
             exclude_kinds=None,
@@ -1144,6 +1144,7 @@ class TestSerenaAgent:
         result = find_symbol_tool.apply(
             name_path_pattern=case.name_path,
             depth=0,
+            relative_path=".",
             substring_matching=True,
         )
 
@@ -1162,6 +1163,7 @@ class TestSerenaAgent:
         result = find_symbol_tool.apply(
             name_path_pattern=case.name_path,
             depth=0,
+            relative_path=".",
             substring_matching=False,
         )
 

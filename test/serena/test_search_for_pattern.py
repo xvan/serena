@@ -6,9 +6,23 @@ previously untested. Test contributed by @AmirF194 in review of PR #1667.
 
 from unittest.mock import MagicMock
 
+import pytest
+
 from serena.config.serena_config import SerenaConfig
 from serena.project import Project
 from serena.tools.file_tools import SearchForPatternTool
+
+
+def test_search_for_pattern_rejects_unscoped_search(tmp_path):
+    (tmp_path / "data.txt").write_text("MATCHME\n", encoding="utf-8")
+
+    project = Project.load(str(tmp_path), serena_config=SerenaConfig(gui_log_window=False, web_dashboard=False))
+    agent = MagicMock()
+    agent.get_active_project_or_raise.return_value = project
+    tool = SearchForPatternTool(agent)
+
+    with pytest.raises(ValueError, match="relative_path"):
+        tool.apply(substring_pattern="MATCHME", relative_path="")
 
 
 def test_search_for_pattern_snippet_stage(tmp_path):
@@ -33,6 +47,7 @@ def test_search_for_pattern_snippet_stage(tmp_path):
             substring_pattern="MATCHME",
             context_lines_before=2,
             context_lines_after=2,
+            relative_path=".",
             restrict_search_to_code_files=False,
             max_answer_chars=cap,
         )

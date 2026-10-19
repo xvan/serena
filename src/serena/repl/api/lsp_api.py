@@ -472,11 +472,11 @@ class LspApi(FacadeApi):
         :param depth: depth up to which descendants shall be retrieved (e.g. use 1 to also retrieve immediate children;
             for the case where the symbol is a class, this will return its methods).
             Ignored if `include_body=True`. Default 0.
-        :param relative_path: (optional) restrict search to this file or directory. If None, searches entire codebase.
+        :param relative_path: the file or directory to restrict the search to.
             If a directory is passed, the search will be restricted to the files in that directory.
             If a file is passed, the search will be restricted to that file.
-            If you have some knowledge about the codebase, you should use this parameter, as it will significantly
-            speed up the search as well as reduce the number of results.
+            An empty value searches the entire codebase, which is prohibitively slow on large repositories;
+            the corresponding `find_symbol` tool rejects such unscoped calls.
         :param include_body: If True, include the symbol's source code. Use judiciously.
         :param include_info: whether to include additional info (hover-like, typically including docstring and signature),
             about the symbol (ignored if include_body is True). Info is never included for child symbols.
